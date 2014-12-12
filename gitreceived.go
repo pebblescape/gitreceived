@@ -202,10 +202,11 @@ func handleChannel(conn *ssh.ServerConn, newChan ssh.NewChannel) {
         fail("ensureCacheRepo", err)
         return
       }
+      
       cmd := exec.Command("git-shell", "-c", cmdargs[0]+" '"+cmdargs[1]+"'")
       cmd.Dir = *repoPath
       cmd.Env = append(os.Environ(),
-        "RECEIVE_USER="+conn.User(),
+        "RECEIVE_USER="+conn.Permissions.Extensions["login"],
         "RECEIVE_REPO="+cmdargs[1],
       )
       done, err := attachCmd(cmd, ch, ch.Stderr(), ch)
@@ -238,13 +239,16 @@ func handleChannel(conn *ssh.ServerConn, newChan ssh.NewChannel) {
 var ErrUnauthorized = errors.New("gitreceive: user is unauthorized")
 
 func checkAuth(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
-  status, err := exitStatus(exec.Command(authChecker[0],
-    append(authChecker[1:], conn.User(), string(bytes.TrimSpace(ssh.MarshalAuthorizedKey(key))))...).Run())
+  status, err := exitOutput(exec.Command(authChecker[0],
+    append(authChecker[1:], conn.User(), string(bytes.TrimSpace(ssh.MarshalAuthorizedKey(key))))...).Output())
+  
+  login := strings.TrimSuffix(strings.TrimPrefix(string(status.Output[:]), "\""), "\"\n")
+  perms := &ssh.Permissions{Extensions: map[string]string{"login": login}}
   if err != nil {
-    return nil, err
+    return perms, err
   }
   if status.Status == 0 {
-    return nil, nil
+    return perms, nil
   }
   return nil, ErrUnauthorized
 }
@@ -286,18 +290,31 @@ type exitStatusMsg struct {
   Status uint32
 }
 
+type exitOutputMsg struct {
+  Status uint32
+  Output []byte
+}
+
 func exitStatus(err error) (exitStatusMsg, error) {
+  return exitStatusMsg{parseExitCode(err)}, err
+}
+
+func exitOutput(out []byte, err error) (exitOutputMsg, error) {
+  return exitOutputMsg{parseExitCode(err), out}, err
+}
+
+func parseExitCode(err error) (uint32) {
   if err != nil {
     if exiterr, ok := err.(*exec.ExitError); ok {
       // There is no platform independent way to retrieve
       // the exit code, but the following will work on Unix
       if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
-        return exitStatusMsg{uint32(status.ExitStatus())}, nil
+        return uint32(status.ExitStatus())
       }
     }
-    return exitStatusMsg{0}, err
+    return 0
   }
-  return exitStatusMsg{0}, nil
+  return 0
 }
 
 var cacheMtx sync.Mutex
