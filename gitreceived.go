@@ -206,7 +206,7 @@ func handleChannel(conn *ssh.ServerConn, newChan ssh.NewChannel) {
       cmd := exec.Command("git-shell", "-c", cmdargs[0]+" '"+cmdargs[1]+"'")
       cmd.Dir = *repoPath
       cmd.Env = append(os.Environ(),
-        "RECEIVE_USER="+conn.Permissions.Extensions["login"],
+        "RECEIVE_AUTH="+conn.Permissions.Extensions["auth"],
         "RECEIVE_REPO="+cmdargs[1],
       )
       done, err := attachCmd(cmd, ch, ch.Stderr(), ch)
@@ -242,8 +242,8 @@ func checkAuth(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, erro
   status, err := exitOutput(exec.Command(authChecker[0],
     append(authChecker[1:], conn.User(), string(bytes.TrimSpace(ssh.MarshalAuthorizedKey(key))))...).Output())
   
-  login := strings.TrimSuffix(strings.TrimPrefix(string(status.Output[:]), "\""), "\"\n")
-  perms := &ssh.Permissions{Extensions: map[string]string{"login": login}}
+  auth := strings.TrimSuffix(strings.TrimPrefix(string(status.Output[:]), "\""), "\"\n")
+  perms := &ssh.Permissions{Extensions: map[string]string{"auth": auth}}
   if err != nil {
     return perms, err
   }

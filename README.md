@@ -29,4 +29,4 @@ The `receiver` is a path to an executable that will handle the push. It will get
 * `$PATH` is the path of the repo that was pushed to. It will not contain slashes.
 * `$COMMIT` is the SHA of the commit that was pushed to master.
 
-If the `authchecker` prints to the authorized username to STDOUT, it'll be passed to the `receiver` in the RECEIVE_USER environment variable
+If the `authchecker` prints something to STDOUT, it'll be passed to the `receiver` in the RECEIVE_AUTH environment variable
