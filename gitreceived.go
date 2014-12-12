@@ -243,7 +243,7 @@ func checkAuth(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, erro
   status, err := exitOutput(exec.Command(authChecker[0],
     append(authChecker[1:], conn.User(), string(bytes.TrimSpace(ssh.MarshalAuthorizedKey(key))))...).Output())
   
-  auth := strings.TrimSuffix(strings.TrimPrefix(string(status.Output[:]), "\""), "\"\n")
+  auth := strings.TrimSuffix(strings.TrimPrefix(string(bytes.TrimSpace(status.Output[:])), "\""), "\"\n")
   perms := &ssh.Permissions{Extensions: map[string]string{"auth": auth}}
   if err != nil {
     return perms, err
