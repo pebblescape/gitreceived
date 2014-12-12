@@ -208,6 +208,7 @@ func handleChannel(conn *ssh.ServerConn, newChan ssh.NewChannel) {
       cmd.Env = append(os.Environ(),
         "RECEIVE_AUTH="+conn.Permissions.Extensions["auth"],
         "RECEIVE_REPO="+cmdargs[1],
+        "RECEIVE_USER="+conn.User(),
       )
       done, err := attachCmd(cmd, ch, ch.Stderr(), ch)
       if err != nil {
